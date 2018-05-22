@@ -122,11 +122,17 @@ public final class ShowBinlogStatus {
                 } else {
                     //step 3 notify other dble to stop the commit & set self status
                     BinlogPause pauseOnInfo = new BinlogPause(UcoreConfig.getInstance().getValue(ClusterParamCfg.CLUSTER_CFG_MYID), BinlogPauseStatus.ON);
-                    ClusterUcoreSender.sendDataToUcore(UcorePathUtil.getBinlogPauseStatus(), pauseOnInfo.toString());
-                    ClusterUcoreSender.sendDataToUcore(UcorePathUtil.getBinlogPauseStatusSelf(), "true");
 
                     //step 4 wait til other dbles to feedback the ucore flag
                     long beginTime = TimeUtil.currentTimeMillis();
+                    boolean isPaused = waitAllSession(c, timeout, beginTime);
+                    if (!isPaused) {
+                        writeResponse(c);
+                        return;
+                    }
+                    ClusterUcoreSender.sendDataToUcore(UcorePathUtil.getBinlogPauseStatus(), pauseOnInfo.toString());
+                    ClusterUcoreSender.sendDataToUcore(UcorePathUtil.getBinlogPauseStatusSelf(), String.valueOf(isPaused));
+
                     boolean isAllSuccess = true;
                     List<UKvBean> responseList = ClusterUcoreSender.getKeyTree(UcorePathUtil.getBinlogPauseStatus());
                     List<UKvBean> onlineList = ClusterUcoreSender.getKeyTree(UcorePathUtil.getOnlinePath());
